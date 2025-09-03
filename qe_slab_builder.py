@@ -9,10 +9,10 @@
 import sys
 import os
 import re
+import io
 import json
 import shutil
 import filecmp
-import tempfile
 import numpy as np
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QPushButton, QFileDialog,
@@ -718,12 +718,10 @@ class SlabApp(QMainWindow):
                 atoms = self.slab * (self.super_x.value(), self.super_y.value(), self.super_z.value())
 
             if atoms:
-                tmpxyz = tempfile.NamedTemporaryFile(delete=False, suffix=".xyz")
-                write(tmpxyz.name, atoms, format="xyz")
-                tmpxyz.close()
+                buf = io.StringIO()
+                write(buf, atoms, format="xyz")
+                xyz_str = buf.getvalue()
 
-                with open(tmpxyz.name) as f:
-                    xyz_str = f.read()
 
                 view = py3Dmol.view(width=700, height=600)
                 view.addModel(xyz_str, "xyz")
