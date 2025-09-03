@@ -213,6 +213,11 @@ class SlabApp(QMainWindow):
         self.degauss.setRange(0.0, 10.0)
         self.degauss.setValue(0.01)
 
+        # dispersion correction
+        self.vdw_corr = QComboBox()
+        self.vdw_corr.addItems(["none", "DFT-D2", "DFT-D3", "TS", "XDM"])
+        self.london_s6 = QDoubleSpinBox(); self.london_s6.setRange(0.0, 2.0); self.london_s6.setValue(1.0)
+        self.london_rcut = QDoubleSpinBox(); self.london_rcut.setRange(0.0, 100.0); self.london_rcut.setValue(16.0)
         self.nspin = QSpinBox(); self.nspin.setRange(1, 2); self.nspin.setValue(1)
         self.nspin.valueChanged.connect(self._on_nspin_changed)
         self.nbnd = QSpinBox(); self.nbnd.setRange(0, 10000); self.nbnd.setValue(0)
@@ -246,6 +251,11 @@ class SlabApp(QMainWindow):
         qe_layout.addRow("occupations", self.occupations)
         qe_layout.addRow("smearing type", self.smearing)
         qe_layout.addRow("degauss (Ry)", self.degauss)
+        
+        qe_layout.addRow("Dispersion correction", self.vdw_corr)
+        qe_layout.addRow("London S6 (if DFT-D2/3)", self.london_s6)
+        qe_layout.addRow("London Rcut (Å)", self.london_rcut)
+
         qe_layout.addRow("nspin (1 or 2)", self.nspin)
         qe_layout.addRow("nbnd (0 = auto)", self.nbnd)
 
@@ -467,6 +477,10 @@ class SlabApp(QMainWindow):
                     "degauss": self.degauss.value(),
                     "nspin": self.nspin.value(),
                     "nbnd": self.nbnd.value(),
+                    "vdw_corr": self.vdw_corr.currentText(),
+                    "london_s6": self.london_s6.value(),
+                    "london_rcut": self.london_rcut.value(),
+
                     "starting_mags": [self.start_mag_1.value(), self.start_mag_2.value(), self.start_mag_3.value()]
                 },
                 "results": self.settings.get("results", {})
@@ -516,11 +530,30 @@ class SlabApp(QMainWindow):
             self.nspin.setValue(qe.get("nspin", 1))
             self.nbnd.setValue(qe.get("nbnd", 0))
             mags = qe.get("starting_mags", [0.0,0.0,0.0])
+            self.vdw_corr.setCurrentText(qe.get("vdw_corr", "none"))
+            self.london_s6.setValue(qe.get("london_s6", 1.0))
+            self.london_rcut.setValue(qe.get("london_rcut", 16.0))
+
             self.start_mag_1.setValue(mags[0] if len(mags)>0 else 0.0)
             self.start_mag_2.setValue(mags[1] if len(mags)>1 else 0.0)
             self.start_mag_3.setValue(mags[2] if len(mags)>2 else 0.0)
             # ensure enabled/disabled matches nspin
             self._on_nspin_changed(self.nspin.value())
+            # --- restore results if available ---
+            results = s.get("results", {})
+            if "bulk_energy_eV" in results and "bulk_energy_Ry" in results:
+                self.bulk_energy_label.setText(
+                    f"Bulk energy = {results['bulk_energy_eV']:.6f} eV ( {results['bulk_energy_Ry']:.6f} Ry )"
+                )
+            if "slab_energy_eV" in results and "slab_energy_Ry" in results:
+                self.slab_energy_label.setText(
+                    f"Slab energy = {results['slab_energy_eV']:.6f} eV ( {results['slab_energy_Ry']:.6f} Ry )"
+                )
+            if "surface_energy_eV_per_A2" in results:
+                self.surface_energy_label.setText(
+                    f"Surface energy = {results['surface_energy_eV_per_A2']:.6f} eV/Å²"
+                )
+
 
             self.log_message(f"Data loaded from {file}")
             self.update_viewer()
@@ -977,6 +1010,17 @@ class SlabApp(QMainWindow):
             lines.append(f"  ntyp = {ntyp},")
             lines.append(f"  ecutwfc = {ecutwfc},")
             lines.append(f"  ecutrho = {ecutrho},")
+            # dispersion
+            vdw_corr = self.vdw_corr.currentText()
+            if vdw_corr != "none":
+                lines.append(f"  vdw_corr = '{vdw_corr}',")
+                # ⚠ QE では DFT-D3, TS, XDM のとき london は不要
+                if vdw_corr == "DFT-D2":
+                    lines.append("  london = .true.,")
+                    lines.append(f"  london_s6 = {self.london_s6.value()},")
+                    lines.append(f"  london_rcut = {self.london_rcut.value()},")
+            
+
             if nspin > 1:
                 lines.append(f"  nspin = {nspin},")
             if nbnd > 0:
