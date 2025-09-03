@@ -77,7 +77,6 @@ It is designed for surface energy calculations and workflow management in **Quan
 ## Notes
 
 * **Supercell settings** are for visualization only (not applied to `.in` files).
-* For slabs, default **K\_POINTS = 1 1 1**, unless “Use custom K\_POINTS” is checked.
 * When `nspin=2`, three starting magnetization fields are enabled; values of `0.0` are omitted in `.in`.
 * Pseudopotentials:
 
