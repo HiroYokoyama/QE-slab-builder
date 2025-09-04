@@ -320,32 +320,37 @@ class SlabApp(QMainWindow):
         folder = QFileDialog.getExistingDirectory(self, "Select pseudopotential INPUT folder (used as pseudo_dir in .in)", "")
         if folder:
             self.pp_input_folder.setText(folder)
-
+    
     def results_tab(self):
         widget = QWidget()
         layout = QVBoxLayout()
         layout.setSpacing(6)
         layout.setContentsMargins(6, 6, 6, 6)
         layout.setAlignment(Qt.AlignTop)
-
+    
         btn_load_bulk = QPushButton("📂 Load Bulk QE Output")
         btn_load_bulk.clicked.connect(lambda: self.load_qe_output("bulk"))
+        self.bulk_file_label = QLabel("Bulk file: None")
         self.bulk_energy_label = QLabel("Bulk energy: None")
-
+    
         btn_load_slab = QPushButton("📂 Load Slab QE Output")
         btn_load_slab.clicked.connect(lambda: self.load_qe_output("slab"))
+        self.slab_file_label = QLabel("Slab file: None")
         self.slab_energy_label = QLabel("Slab energy: None")
-
+    
         self.surface_energy_label = QLabel("Surface energy: Not calculated")
-
+    
         layout.addWidget(btn_load_bulk)
+        layout.addWidget(self.bulk_file_label)
         layout.addWidget(self.bulk_energy_label)
         layout.addWidget(btn_load_slab)
+        layout.addWidget(self.slab_file_label)
         layout.addWidget(self.slab_energy_label)
         layout.addWidget(self.surface_energy_label)
-
+    
         widget.setLayout(layout)
         return widget
+
 
     def viewer_tab(self):
         widget = QWidget()
@@ -652,14 +657,16 @@ class SlabApp(QMainWindow):
                 results["bulk_energy_eV"] = e_eV
                 results["bulk_energy_Ry"] = e_Ry
                 results["bulk_natoms"] = natoms
+                results["bulk_file"] = file
+                self.bulk_file_label.setText(f"Bulk file: {os.path.basename(file)}")
                 self.bulk_energy_label.setText(f"Bulk energy = {e_eV:.6f} eV ( {e_Ry:.6f} Ry )")
-                self.log_message(f"Bulk energy loaded: {e_eV:.6f} eV ( {e_Ry:.6f} Ry ), natoms={natoms}")
             elif mode == "slab":
                 results["slab_energy_eV"] = e_eV
                 results["slab_energy_Ry"] = e_Ry
                 results["slab_natoms"] = natoms
+                results["slab_file"] = file
+                self.slab_file_label.setText(f"Slab file: {os.path.basename(file)}")
                 self.slab_energy_label.setText(f"Slab energy = {e_eV:.6f} eV ( {e_Ry:.6f} Ry )")
-                self.log_message(f"Slab energy loaded: {e_eV:.6f} eV ( {e_Ry:.6f} Ry ), natoms={natoms}")
             else:
                 self.log_message(f"[Error] unknown mode for load_qe_output: {mode}")
                 return
